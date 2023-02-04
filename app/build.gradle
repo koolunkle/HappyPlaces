@@ -38,6 +38,9 @@ android {
 
 dependencies {
 
+    // CircleImageView
+    implementation 'de.hdodenhof:circleimageview:3.1.0'
+
     // Dexter
     implementation 'com.karumi:dexter:6.2.3'
 
