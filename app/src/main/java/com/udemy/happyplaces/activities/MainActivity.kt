@@ -13,6 +13,7 @@ import com.udemy.happyplaces.adapters.HappyPlacesAdapter
 import com.udemy.happyplaces.database.DatabaseHandler
 import com.udemy.happyplaces.databinding.ActivityMainBinding
 import com.udemy.happyplaces.models.HappyPlaceModel
+import com.udemy.happyplaces.utils.SwipeToDeleteCallback
 import com.udemy.happyplaces.utils.SwipeToEditCallback
 
 class MainActivity : AppCompatActivity() {
@@ -37,7 +38,7 @@ class MainActivity : AppCompatActivity() {
         binding.rvHappyPlacesList.layoutManager = LinearLayoutManager(this)
         binding.rvHappyPlacesList.setHasFixedSize(true)
 
-        val placesAdapter = HappyPlacesAdapter(happyPlaceList)
+        val placesAdapter = HappyPlacesAdapter(this, happyPlaceList)
         binding.rvHappyPlacesList.adapter = placesAdapter
 
         placesAdapter.setOnClickListener(object : HappyPlacesAdapter.OnClickListener {
@@ -57,6 +58,16 @@ class MainActivity : AppCompatActivity() {
         }
         val editItemTouchHelper = ItemTouchHelper(editSwipeHandler)
         editItemTouchHelper.attachToRecyclerView(binding.rvHappyPlacesList)
+
+        val deleteSwipeHandler = object : SwipeToDeleteCallback(this) {
+            override fun onSwiped(viewHolder: RecyclerView.ViewHolder, direction: Int) {
+                val adapter = binding.rvHappyPlacesList.adapter as HappyPlacesAdapter
+                adapter.removeAt(viewHolder.adapterPosition)
+                getHappyPlacesListFromLocalDatabase()
+            }
+        }
+        val deleteItemTouchHelper = ItemTouchHelper(deleteSwipeHandler)
+        deleteItemTouchHelper.attachToRecyclerView(binding.rvHappyPlacesList)
     }
 
     private fun getHappyPlacesListFromLocalDatabase() {
