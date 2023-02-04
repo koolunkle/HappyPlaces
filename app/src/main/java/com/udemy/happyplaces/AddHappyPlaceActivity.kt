@@ -1,10 +1,12 @@
 package com.udemy.happyplaces
 
+import android.app.Activity
 import android.app.DatePickerDialog
 import android.content.ActivityNotFoundException
 import android.content.Intent
 import android.net.Uri
 import android.os.Bundle
+import android.provider.MediaStore
 import android.provider.Settings
 import android.view.View
 import android.widget.Toast
@@ -16,6 +18,7 @@ import com.karumi.dexter.PermissionToken
 import com.karumi.dexter.listener.PermissionRequest
 import com.karumi.dexter.listener.multi.MultiplePermissionsListener
 import com.udemy.happyplaces.databinding.ActivityAddHappyPlaceBinding
+import java.io.IOException
 import java.text.SimpleDateFormat
 import java.util.*
 
@@ -85,6 +88,27 @@ class AddHappyPlaceActivity : AppCompatActivity(), View.OnClickListener {
         }
     }
 
+    override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
+        super.onActivityResult(requestCode, resultCode, data)
+        if (resultCode == Activity.RESULT_OK) {
+            if (requestCode == GALLERY) {
+                if (data != null) {
+                    val contentURI = data.data
+                    try {
+                        val selectedImageBitmap =
+                            MediaStore.Images.Media.getBitmap(this.contentResolver, contentURI)
+                        binding.ivPlaceImage.setImageBitmap(selectedImageBitmap)
+                    } catch (e: IOException) {
+                        e.printStackTrace()
+                        Toast.makeText(
+                            this, "Failed to load the Image from Gallery", Toast.LENGTH_SHORT
+                        ).show()
+                    }
+                }
+            }
+        }
+    }
+
     private fun choosePhotoFromGallery() {
         Dexter.withContext(this).withPermissions(
             android.Manifest.permission.READ_EXTERNAL_STORAGE,
@@ -92,11 +116,9 @@ class AddHappyPlaceActivity : AppCompatActivity(), View.OnClickListener {
         ).withListener(object : MultiplePermissionsListener {
             override fun onPermissionsChecked(report: MultiplePermissionsReport?) {
                 if (report!!.areAllPermissionsGranted()) {
-                    Toast.makeText(
-                        this@AddHappyPlaceActivity,
-                        "Storage READ/WRITE permission are granted. Now you can select an image from GALLERY",
-                        Toast.LENGTH_SHORT
-                    ).show()
+                    val galleryIntent =
+                        Intent(Intent.ACTION_PICK, MediaStore.Images.Media.EXTERNAL_CONTENT_URI)
+                    startActivityForResult(galleryIntent, GALLERY)
                 }
             }
 
@@ -129,6 +151,10 @@ class AddHappyPlaceActivity : AppCompatActivity(), View.OnClickListener {
         val customFormat = "dd.MM.yyyy"
         val sdf = SimpleDateFormat(customFormat, Locale.getDefault())
         binding.etDate.setText(sdf.format(calendar.time).toString())
+    }
+
+    companion object {
+        private const val GALLERY = 1
     }
 
 }
