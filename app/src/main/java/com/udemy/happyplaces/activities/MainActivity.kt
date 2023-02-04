@@ -1,7 +1,9 @@
 package com.udemy.happyplaces.activities
 
+import android.app.Activity
 import android.content.Intent
 import android.os.Bundle
+import android.util.Log
 import android.view.View
 import androidx.appcompat.app.AppCompatActivity
 import androidx.recyclerview.widget.LinearLayoutManager
@@ -23,7 +25,7 @@ class MainActivity : AppCompatActivity() {
 
         binding.fabAddHappyPlace.setOnClickListener {
             val intent = Intent(this, AddHappyPlaceActivity::class.java)
-            startActivity(intent)
+            startActivityForResult(intent, ADD_PLACE_ACTIVITY_REQUEST_CODE)
         }
         getHappyPlacesListFromLocalDatabase()
     }
@@ -50,9 +52,24 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
+    override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
+        super.onActivityResult(requestCode, resultCode, data)
+        if (requestCode == ADD_PLACE_ACTIVITY_REQUEST_CODE) {
+            if (resultCode == Activity.RESULT_OK) {
+                getHappyPlacesListFromLocalDatabase()
+            } else {
+                Log.e("Activity", "Cancelled or BackPressed")
+            }
+        }
+    }
+
     override fun onDestroy() {
         _binding = null
         super.onDestroy()
+    }
+
+    companion object {
+        const val ADD_PLACE_ACTIVITY_REQUEST_CODE = 1
     }
 
 }
