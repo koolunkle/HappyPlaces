@@ -1,5 +1,6 @@
 package com.udemy.happyplaces.activities
 
+import android.Manifest
 import android.app.Activity
 import android.app.DatePickerDialog
 import android.content.ActivityNotFoundException
@@ -7,6 +8,7 @@ import android.content.Context
 import android.content.ContextWrapper
 import android.content.Intent
 import android.graphics.Bitmap
+import android.location.LocationManager
 import android.net.Uri
 import android.os.Bundle
 import android.provider.MediaStore
@@ -62,6 +64,7 @@ class AddHappyPlaceActivity : AppCompatActivity(), View.OnClickListener {
         setSupportActionBar(binding.toolbarAddPlace)
 
         supportActionBar?.setDisplayHomeAsUpEnabled(true)
+
         binding.toolbarAddPlace.setNavigationOnClickListener {
             onBackPressed()
         }
@@ -86,29 +89,29 @@ class AddHappyPlaceActivity : AppCompatActivity(), View.OnClickListener {
 
         if (mHappyPlaceDetails != null) {
             supportActionBar?.title = "Edit Happy Place"
-
             binding.etTitle.setText(mHappyPlaceDetails!!.title)
             binding.etDescription.setText(mHappyPlaceDetails!!.description)
             binding.etDate.setText(mHappyPlaceDetails!!.date)
             binding.etLocation.setText(mHappyPlaceDetails!!.location)
-
             mLatitude = mHappyPlaceDetails!!.latitude
             mLongitude = mHappyPlaceDetails!!.longitude
-
             saveImageToInternalStorage = Uri.parse(mHappyPlaceDetails!!.image)
             binding.ivPlaceImage.setImageURI(saveImageToInternalStorage)
             binding.btnSave.text = resources.getString(R.string.text_update)
         }
-
         binding.etDate.setOnClickListener(this)
         binding.tvAddImage.setOnClickListener(this)
         binding.btnSave.setOnClickListener(this)
         binding.etLocation.setOnClickListener(this)
+        binding.tvSelectCurrentLocation.setOnClickListener(this)
     }
 
-    override fun onDestroy() {
-        _binding = null
-        super.onDestroy()
+    private fun isLocationEnabled(): Boolean {
+        val locationManager: LocationManager =
+            getSystemService(Context.LOCATION_SERVICE) as LocationManager
+        return locationManager.isProviderEnabled(LocationManager.GPS_PROVIDER) || locationManager.isProviderEnabled(
+            LocationManager.NETWORK_PROVIDER
+        )
     }
 
     override fun onClick(v: View?) {
@@ -125,7 +128,6 @@ class AddHappyPlaceActivity : AppCompatActivity(), View.OnClickListener {
             R.id.tv_add_image -> {
                 val pictureDialog = AlertDialog.Builder(this)
                 pictureDialog.setTitle("Select Action")
-
                 val pictureDialogItems =
                     arrayOf("Select photo from Gallery", "Capture photo from camera")
                 pictureDialog.setItems(pictureDialogItems) { _, which ->
@@ -191,6 +193,39 @@ class AddHappyPlaceActivity : AppCompatActivity(), View.OnClickListener {
                     e.printStackTrace()
                 }
             }
+            R.id.tv_select_current_location -> {
+                if (!isLocationEnabled()) {
+                    Toast.makeText(
+                        this,
+                        "Your location provider is turned off. Please turn it on.",
+                        Toast.LENGTH_SHORT
+                    ).show()
+
+                    val intent = Intent(Settings.ACTION_LOCATION_SOURCE_SETTINGS)
+                    startActivity(intent)
+                } else {
+                    Dexter.withActivity(this).withPermissions(
+                        Manifest.permission.ACCESS_FINE_LOCATION,
+                        Manifest.permission.ACCESS_COARSE_LOCATION
+                    ).withListener(object : MultiplePermissionsListener {
+                        override fun onPermissionsChecked(report: MultiplePermissionsReport?) {
+                            if (report!!.areAllPermissionsGranted()) {
+                                Toast.makeText(
+                                    this@AddHappyPlaceActivity,
+                                    "Location permission is granted. Now you can request for a current location.",
+                                    Toast.LENGTH_SHORT
+                                ).show()
+                            }
+                        }
+
+                        override fun onPermissionRationaleShouldBeShown(
+                            permissions: MutableList<PermissionRequest>?, token: PermissionToken?
+                        ) {
+                            showRationalDialogForPermissions()
+                        }
+                    }).onSameThread().check()
+                }
+            }
         }
     }
 
@@ -203,10 +238,8 @@ class AddHappyPlaceActivity : AppCompatActivity(), View.OnClickListener {
                     try {
                         val selectedImageBitmap =
                             MediaStore.Images.Media.getBitmap(this.contentResolver, contentURI)
-
                         saveImageToInternalStorage = saveImageToInternalStorage(selectedImageBitmap)
                         Log.e("Saved Image: ", "Path :: $saveImageToInternalStorage")
-
                         binding.ivPlaceImage.setImageBitmap(selectedImageBitmap)
                     } catch (e: IOException) {
                         e.printStackTrace()
@@ -217,10 +250,8 @@ class AddHappyPlaceActivity : AppCompatActivity(), View.OnClickListener {
                 }
             } else if (requestCode == CAMERA) {
                 val thumbnail: Bitmap = data!!.extras!!.get("data") as Bitmap
-
                 saveImageToInternalStorage = saveImageToInternalStorage(thumbnail)
                 Log.e("Saved Image: ", "Path :: $saveImageToInternalStorage")
-
                 binding.ivPlaceImage.setImageBitmap(thumbnail)
             } else if (requestCode == PLACE_AUTOCOMPLETE_REQUEST_CODE) {
                 val place: Place = Autocomplete.getPlaceFromIntent(data!!)
@@ -235,9 +266,9 @@ class AddHappyPlaceActivity : AppCompatActivity(), View.OnClickListener {
 
     private fun takePhotoFromCamera() {
         Dexter.withContext(this).withPermissions(
-            android.Manifest.permission.READ_EXTERNAL_STORAGE,
-            android.Manifest.permission.WRITE_EXTERNAL_STORAGE,
-            android.Manifest.permission.CAMERA
+            Manifest.permission.READ_EXTERNAL_STORAGE,
+            Manifest.permission.WRITE_EXTERNAL_STORAGE,
+            Manifest.permission.CAMERA
         ).withListener(object : MultiplePermissionsListener {
             override fun onPermissionsChecked(report: MultiplePermissionsReport?) {
                 if (report!!.areAllPermissionsGranted()) {
@@ -256,8 +287,7 @@ class AddHappyPlaceActivity : AppCompatActivity(), View.OnClickListener {
 
     private fun choosePhotoFromGallery() {
         Dexter.withContext(this).withPermissions(
-            android.Manifest.permission.READ_EXTERNAL_STORAGE,
-            android.Manifest.permission.WRITE_EXTERNAL_STORAGE
+            Manifest.permission.READ_EXTERNAL_STORAGE, Manifest.permission.WRITE_EXTERNAL_STORAGE
         ).withListener(object : MultiplePermissionsListener {
             override fun onPermissionsChecked(report: MultiplePermissionsReport?) {
                 if (report!!.areAllPermissionsGranted()) {
@@ -302,7 +332,6 @@ class AddHappyPlaceActivity : AppCompatActivity(), View.OnClickListener {
         val wrapper = ContextWrapper(applicationContext)
         var file = wrapper.getDir(IMAGE_DIRECTORY, Context.MODE_PRIVATE)
         file = File(file, "${UUID.randomUUID()}.jpg")
-
         try {
             val stream: OutputStream = FileOutputStream(file)
             bitmap.compress(Bitmap.CompressFormat.JPEG, 100, stream)
@@ -312,6 +341,11 @@ class AddHappyPlaceActivity : AppCompatActivity(), View.OnClickListener {
             e.printStackTrace()
         }
         return Uri.parse(file.absolutePath)
+    }
+
+    override fun onDestroy() {
+        _binding = null
+        super.onDestroy()
     }
 
     companion object {
