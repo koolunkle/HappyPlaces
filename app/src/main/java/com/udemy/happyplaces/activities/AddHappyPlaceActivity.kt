@@ -1,6 +1,7 @@
 package com.udemy.happyplaces.activities
 
 import android.Manifest
+import android.annotation.SuppressLint
 import android.app.Activity
 import android.app.DatePickerDialog
 import android.content.ActivityNotFoundException
@@ -8,9 +9,11 @@ import android.content.Context
 import android.content.ContextWrapper
 import android.content.Intent
 import android.graphics.Bitmap
+import android.location.Location
 import android.location.LocationManager
 import android.net.Uri
 import android.os.Bundle
+import android.os.Looper
 import android.provider.MediaStore
 import android.provider.Settings
 import android.util.Log
@@ -18,6 +21,7 @@ import android.view.View
 import android.widget.Toast
 import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
+import com.google.android.gms.location.*
 import com.google.android.libraries.places.api.Places
 import com.google.android.libraries.places.api.model.Place
 import com.google.android.libraries.places.widget.Autocomplete
@@ -57,6 +61,8 @@ class AddHappyPlaceActivity : AppCompatActivity(), View.OnClickListener {
 
     private var mHappyPlaceDetails: HappyPlaceModel? = null
 
+    private lateinit var mFusedLocationClient: FusedLocationProviderClient
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         _binding = ActivityAddHappyPlaceBinding.inflate(layoutInflater)
@@ -68,6 +74,8 @@ class AddHappyPlaceActivity : AppCompatActivity(), View.OnClickListener {
         binding.toolbarAddPlace.setNavigationOnClickListener {
             onBackPressed()
         }
+
+        mFusedLocationClient = LocationServices.getFusedLocationProviderClient(this)
 
         if (!Places.isInitialized()) {
             Places.initialize(
@@ -89,13 +97,17 @@ class AddHappyPlaceActivity : AppCompatActivity(), View.OnClickListener {
 
         if (mHappyPlaceDetails != null) {
             supportActionBar?.title = "Edit Happy Place"
+
             binding.etTitle.setText(mHappyPlaceDetails!!.title)
             binding.etDescription.setText(mHappyPlaceDetails!!.description)
             binding.etDate.setText(mHappyPlaceDetails!!.date)
             binding.etLocation.setText(mHappyPlaceDetails!!.location)
+
             mLatitude = mHappyPlaceDetails!!.latitude
             mLongitude = mHappyPlaceDetails!!.longitude
+
             saveImageToInternalStorage = Uri.parse(mHappyPlaceDetails!!.image)
+
             binding.ivPlaceImage.setImageURI(saveImageToInternalStorage)
             binding.btnSave.text = resources.getString(R.string.text_update)
         }
@@ -109,9 +121,35 @@ class AddHappyPlaceActivity : AppCompatActivity(), View.OnClickListener {
     private fun isLocationEnabled(): Boolean {
         val locationManager: LocationManager =
             getSystemService(Context.LOCATION_SERVICE) as LocationManager
+
         return locationManager.isProviderEnabled(LocationManager.GPS_PROVIDER) || locationManager.isProviderEnabled(
             LocationManager.NETWORK_PROVIDER
         )
+    }
+
+    @SuppressLint("MissingPermission")
+    private fun requestNewLocationData() {
+        val mLocationRequest = LocationRequest()
+        mLocationRequest.priority = LocationRequest.PRIORITY_HIGH_ACCURACY
+        mLocationRequest.interval = 1000
+        mLocationRequest.numUpdates = 1
+
+        mFusedLocationClient = LocationServices.getFusedLocationProviderClient(this)
+        mFusedLocationClient.requestLocationUpdates(
+            mLocationRequest, mLocationCallback, Looper.myLooper()
+        )
+    }
+
+    private val mLocationCallback = object : LocationCallback() {
+        override fun onLocationResult(locationResult: LocationResult) {
+            val mLastLocation: Location = locationResult.lastLocation!!
+
+            mLatitude = mLastLocation.latitude
+            Log.e("Current Latitude", "$mLatitude")
+
+            mLongitude = mLastLocation.longitude
+            Log.e("Current Longitude", "$mLongitude")
+        }
     }
 
     override fun onClick(v: View?) {
@@ -128,8 +166,10 @@ class AddHappyPlaceActivity : AppCompatActivity(), View.OnClickListener {
             R.id.tv_add_image -> {
                 val pictureDialog = AlertDialog.Builder(this)
                 pictureDialog.setTitle("Select Action")
+
                 val pictureDialogItems =
                     arrayOf("Select photo from Gallery", "Capture photo from camera")
+
                 pictureDialog.setItems(pictureDialogItems) { _, which ->
                     when (which) {
                         0 -> choosePhotoFromGallery()
@@ -210,11 +250,7 @@ class AddHappyPlaceActivity : AppCompatActivity(), View.OnClickListener {
                     ).withListener(object : MultiplePermissionsListener {
                         override fun onPermissionsChecked(report: MultiplePermissionsReport?) {
                             if (report!!.areAllPermissionsGranted()) {
-                                Toast.makeText(
-                                    this@AddHappyPlaceActivity,
-                                    "Location permission is granted. Now you can request for a current location.",
-                                    Toast.LENGTH_SHORT
-                                ).show()
+                                requestNewLocationData()
                             }
                         }
 
@@ -238,8 +274,10 @@ class AddHappyPlaceActivity : AppCompatActivity(), View.OnClickListener {
                     try {
                         val selectedImageBitmap =
                             MediaStore.Images.Media.getBitmap(this.contentResolver, contentURI)
+
                         saveImageToInternalStorage = saveImageToInternalStorage(selectedImageBitmap)
                         Log.e("Saved Image: ", "Path :: $saveImageToInternalStorage")
+
                         binding.ivPlaceImage.setImageBitmap(selectedImageBitmap)
                     } catch (e: IOException) {
                         e.printStackTrace()

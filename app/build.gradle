@@ -48,6 +48,9 @@ android {
 
 dependencies {
 
+    // GoogleLocation
+    implementation 'com.google.android.gms:play-services-location:21.0.1'
+
     // GoogleMaps
     implementation 'com.google.android.gms:play-services-maps:18.1.0'
 
