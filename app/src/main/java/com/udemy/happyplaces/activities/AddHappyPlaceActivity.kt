@@ -36,6 +36,7 @@ import com.udemy.happyplaces.R
 import com.udemy.happyplaces.database.DatabaseHandler
 import com.udemy.happyplaces.databinding.ActivityAddHappyPlaceBinding
 import com.udemy.happyplaces.models.HappyPlaceModel
+import com.udemy.happyplaces.utils.GetAddressFromLatLng
 import java.io.File
 import java.io.FileOutputStream
 import java.io.IOException
@@ -149,6 +150,19 @@ class AddHappyPlaceActivity : AppCompatActivity(), View.OnClickListener {
 
             mLongitude = mLastLocation.longitude
             Log.e("Current Longitude", "$mLongitude")
+
+            val addressTask =
+                GetAddressFromLatLng(this@AddHappyPlaceActivity, mLatitude, mLongitude)
+            addressTask.setAddressListener(object : GetAddressFromLatLng.AddressListener {
+                override fun onAddressFound(address: String?) {
+                    binding.etLocation.setText(address)
+                }
+
+                override fun onError() {
+                    Log.e("Get Address:: ", "Something went wrong")
+                }
+            })
+            addressTask.getAddress()
         }
     }
 
