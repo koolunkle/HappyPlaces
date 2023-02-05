@@ -1,5 +1,6 @@
 package com.udemy.happyplaces.activities
 
+import android.content.Intent
 import android.net.Uri
 import android.os.Bundle
 import androidx.appcompat.app.AppCompatActivity
@@ -27,17 +28,26 @@ class HappyPlaceDetailActivity : AppCompatActivity() {
             setSupportActionBar(binding.toolbarHappyPlaceDetail)
             supportActionBar!!.setDisplayHomeAsUpEnabled(true)
             supportActionBar!!.title = happyPlaceDetailModel.title
+
             binding.toolbarHappyPlaceDetail.setNavigationOnClickListener {
                 onBackPressed()
             }
+
             binding.ivPlaceImage.setImageURI(Uri.parse(happyPlaceDetailModel.image))
             binding.tvDescription.text = happyPlaceDetailModel.description
             binding.tvLocation.text = happyPlaceDetailModel.location
+
+            binding.btnViewOnMap.setOnClickListener {
+                val intent = Intent(this@HappyPlaceDetailActivity, MapActivity::class.java)
+                intent.putExtra(MainActivity.EXTRA_PLACE_DETAILS, happyPlaceDetailModel)
+                startActivity(intent)
+            }
         }
     }
 
-    override fun onDetachedFromWindow() {
+    override fun onDestroy() {
         _binding = null
-        super.onDetachedFromWindow()
+        super.onDestroy()
     }
+
 }

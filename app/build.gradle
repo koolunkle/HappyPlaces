@@ -1,6 +1,7 @@
 plugins {
     id 'com.android.application'
     id 'org.jetbrains.kotlin.android'
+    id 'com.google.android.libraries.mapsplatform.secrets-gradle-plugin'
 }
 
 Properties properties = new Properties()
@@ -46,6 +47,9 @@ android {
 }
 
 dependencies {
+
+    // GoogleMaps
+    implementation 'com.google.android.gms:play-services-maps:18.1.0'
 
     // GooglePlaces
     implementation 'com.google.android.libraries.places:places:3.0.0'
