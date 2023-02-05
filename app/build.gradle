@@ -3,6 +3,11 @@ plugins {
     id 'org.jetbrains.kotlin.android'
 }
 
+Properties properties = new Properties()
+properties.load(project.rootProject.file('local.properties').newDataInputStream())
+
+def googleApiKey = properties.getProperty('google_api_key')
+
 android {
     namespace 'com.udemy.happyplaces'
     compileSdk 33
@@ -15,6 +20,10 @@ android {
         versionName "1.0"
 
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
+
+        buildConfigField "String", "GOOGLE_API_KEY", properties['google_api_key']
+
+        manifestPlaceholders = [google_api_key: googleApiKey]
     }
 
     buildTypes {
@@ -37,6 +46,9 @@ android {
 }
 
 dependencies {
+
+    // GooglePlaces
+    implementation 'com.google.android.libraries.places:places:3.0.0'
 
     // CircleImageView
     implementation 'de.hdodenhof:circleimageview:3.1.0'
